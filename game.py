@@ -129,7 +129,7 @@ class Game():
                 if reach_goal[i] == 0:
                     num[i] += 1
 
-            if np.sum(num) > MAX_NUM_STEP_DICT[self.env.env_name]:
+            if np.sum(num) > MAX_NUM_STEP_DICT[self.env.env_name] * len(self.agents):
                 print("Too many steps, see if you are in a dead/live lock!\n")
                 score = 0
                 return histry, score

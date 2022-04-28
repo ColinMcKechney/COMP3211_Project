@@ -5,6 +5,7 @@ from animator import Animation
 import argparse
 import os
 import sys
+from copy import deepcopy
 
 import numpy as np
 
@@ -99,7 +100,7 @@ if __name__ == '__main__':
 
         agents = []
         for name in args.agents:
-            agents.append(MyAgent(name, env))
+            agents.append(MyAgent(name, deepcopy(env)))
 
         starts = get_starts(args.agents)
 
@@ -108,7 +109,7 @@ if __name__ == '__main__':
             print(starts)
             print('-------------\n')
 
-            game = Game(starts, agents, env)
+            game = Game(starts, agents, deepcopy(env))
             history, score = game.run()
             print(f'==> Score: {score}\n')
 
@@ -139,7 +140,7 @@ if __name__ == '__main__':
         env = Env(args.goals, args.map, map_name)
         agents = []
         for name in args.agents:
-            agents.append(MyAgent(name, env))
+            agents.append(MyAgent(name, deepcopy(env)))
 
         num_rounds = NUM_ROUNDS[map_name]
         score_list = []
@@ -151,11 +152,12 @@ if __name__ == '__main__':
             # print(initials)
             invalid = False
             for pos in initials:
-                # print(args.map[tuple(pos)])
+                # print(tuple(pos), args.map[tuple(pos)])
                 if args.map[tuple(pos)] == 1:
                     invalid = True
                     break
-                if map_name == 'large' and pos[0] > 110 and pos[1] < 50:
+                if map_name == 'large' and pos[0] > 110 and pos[1] < 75:
+                    invalid = True
                     break
             if invalid:
                 continue
