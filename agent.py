@@ -85,19 +85,25 @@ class MyAgent(BaseAgent):
 
     @set_timeout(TIMEOUT,after_timeout)
     def get_action(self,game_state):
-
+        
         if self.firstIter:
+            
             mapName = self.env.env_name.capitalize()
             mapName = 'ShortestPath'+ mapName + '.db'
             self.initPos = Point(game_state[self.name][0],game_state[self.name][1])
+            
             sqlite3.register_converter("Point", convert_point)
             sqlite3.register_converter("ListPaths", convert_ListPath)
             sqlite3.register_adapter(Point, adapt_point)
             sqlite3.register_adapter(ListPaths,adapt_Listpath)
+            
             con = sqlite3.connect(mapName,detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
             cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(self.name,self.initPos))
+            
+            cur.fetchone
             pathPos = cur.fetchone()[0]
+            
             cur.close()
             con.close()
             if(pathPos != None):
@@ -108,11 +114,10 @@ class MyAgent(BaseAgent):
 
         if len(self.bestPath) <= 1 :
             self.firstIter = True
-
+        
         next_move = 'nil'
         if len(self.bestPath) != 0:
             next_move = self.bestPath.pop(0)
-
         return next_move
 
       
