@@ -24,6 +24,7 @@ class MyAgent(BaseAgent):
         self.firstIter = True
         self.bestPath = []
         self.locations = {}
+        self.other_initials = {}
         self.pathPos = []
     
     #Give the available actions but only regarded to the map not players
@@ -123,6 +124,7 @@ class MyAgent(BaseAgent):
             for name in game_state.keys():
                 if name == self.name:
                     continue
+                self.other_initials[name] = game_state[name]
                 cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,Point(game_state[name][0], game_state[name][1])))
                 cur.fetchone
                 self.locations[name] = cur.fetchone()[0].getValue()
@@ -141,16 +143,44 @@ class MyAgent(BaseAgent):
 
         #if len(self.bestPath) <= 1 :
             #self.firstIter = True
+
+        #potential for update database call to keep the locations correct
+        '''mapName = self.env.env_name.capitalize()
+        mapName = 'ShortestPath'+ mapName + '.db'
+        
+        sqlite3.register_converter("Point", convert_point)
+        sqlite3.register_converter("ListPaths", convert_ListPath)
+        sqlite3.register_adapter(Point, adapt_point)
+        sqlite3.register_adapter(ListPaths,adapt_Listpath)
+        
+        con = sqlite3.connect(mapName,detect_types=sqlite3.PARSE_DECLTYPES)
+        cur = con.cursor()
+
+        for name in self.locations.keys():
+            if name == self.name:
+                continue
+            cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,Point(self.other_initials[name][0], self.other_initials[name][1])))
+            cur.fetchone
+            self.locations[name] = cur.fetchone()[0].getValue()
+
+        cur.close()
+        con.close()'''
         
         next_move = 'nil'
         if len(self.bestPath) != 0:
 
-            for l in self.locations.values():
-                if self.pathPos.getValue()[-1 * len(self.bestPath)] in l:
-                    if l.index(self.pathPos.getValue()[-1 * len(self.bestPath)]) == self.pathPos.getValue().index(self.pathPos.getValue()[-1 * len(self.bestPath)]) or (l.index(self.pathPos.getValue()[-1 * len(self.bestPath)]) == len(l) - 1 and self.pathPos.getValue().index(self.pathPos.getValue()[-1 * len(self.bestPath)]) >= len(l) -1):
+            for key, l in self.locations.items(): #loop through the other agents 
+                test_point = self.pathPos.getValue()[-1 * len(self.bestPath)] #this is the point we're working with at the moment, the next spot the agent is going to go
+                if test_point in l:  #if it's in the path of the other 
+                    
+                    # or (test_point == l[test_index -1] and self.pathPos.getValue()[test_index -1] == l[test_index])
+                    #this or is for swaps, will work on later 
+                    test_index = self.pathPos.getValue().index(test_point) #index of point
+                    if l.index(test_point) == test_index or (l.index(test_point) == len(l) - 1 and test_index >= len(l) -1): #either they meet along the way or one has finished
                         #continue
-                        new_act = self.collision_avoid(self.pathPos.getValue().index(self.pathPos.getValue()[-1 * len(self.bestPath)]) )
+                        new_act = self.collision_avoid(test_index ) #get the new action that you are going to do instead
 
+                        #grabbing new path from new position
                         mapName = self.env.env_name.capitalize()
                         mapName = 'ShortestPath'+ mapName + '.db'
                         old_init = self.pathPos.getValue()[-1 * len(self.bestPath) -1 ]
@@ -169,10 +199,9 @@ class MyAgent(BaseAgent):
                         cur.fetchone
                         pathPos = cur.fetchone()[0]
 
-                        cur.close()
-                        con.close()
-
-                        tmp = [self.pathPos.getValue()[i] for i in range(self.pathPos.getValue().index(self.pathPos.getValue()[-1 * len(self.bestPath)]))]
+                        
+                        #add back in the old values that you've already traveled, keeps indexes in line
+                        tmp = [self.pathPos.getValue()[i] for i in range(test_index)]
                         tmp.append(self.initPos.getValue())
 
                         for val in pathPos.getValue():
@@ -180,12 +209,34 @@ class MyAgent(BaseAgent):
 
                         self.pathPos = ListPaths(tmp)
                         pathPos.getValue().insert(0,self.initPos.getValue())
-                        self.initPos = Point(old_init[0], old_init[1])
+                        self.initPos = Point(old_init[0], old_init[1]) #reset initPoint to keep path to actions working 
                         
                         if(pathPos != None):
                             self.bestPath = self.convertPathPosToActions(pathPos.getValue())
                         else:
                             self.bestPath = list()
+                        
+                        #potential broadcast point for database
+                        '''updated_name = 'update_' + self.name
+                        print('before')
+                            #cur.execute("INSERT INTO paths (agent, position, path) VALUES((?), (?), (?))",(updated_name,self.initPos,self.pathPos))
+                        cur.execute("SELECT * FROM paths WHERE agent = (?)",(updated_name))
+                        print(cur.fetchall())
+                        print('here')
+
+                        #cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(updated_name,self.initPos))
+                        
+                        cur.fetchone
+                        pathPos = cur.fetchone()[0]
+                        print(pathPos)
+                        print(self.pathPos)
+
+                        cur.close()
+                        con.close()'''
+
+
+                        
+                        '''TODO: create a new entry in the database to broadcast changes'''
                         
 
 
@@ -194,7 +245,8 @@ class MyAgent(BaseAgent):
         return next_move
 
     def collision_avoid(self,k):
-        game_state = {self.name: self.pathPos.getValue()[k-1]}
+        #collision avoidance alg
+        game_state = {self.name: self.pathPos.getValue()[k-1]} #create a game state
 
         for key, item in self.locations.items():
             if k-1 > len(item):
@@ -202,8 +254,11 @@ class MyAgent(BaseAgent):
             else:
                 game_state[key] = item[k-1]
         actions = self.get_avai_actions(game_state)
-        actions.remove(self.bestPath[0])
         
+        actions.remove(self.bestPath[0]) #remove the action causing the conflict
+        actions.remove('nil') #can't do nothing to avoid deadlock
+        
+        #find the option that keeps the distance the best 
         min_euclid = 999999
         min_act = self.pathPos.getValue()[k-1]
         for action in actions:
