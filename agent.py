@@ -173,10 +173,10 @@ class MyAgent(BaseAgent):
                 test_point = self.pathPos.getValue()[-1 * len(self.bestPath)] #this is the point we're working with at the moment, the next spot the agent is going to go
                 if test_point in l:  #if it's in the path of the other 
                     
-                    # or (test_point == l[test_index -1] and self.pathPos.getValue()[test_index -1] == l[test_index])
+                    # 
                     #this or is for swaps, will work on later 
                     test_index = self.pathPos.getValue().index(test_point) #index of point
-                    if l.index(test_point) == test_index or (l.index(test_point) == len(l) - 1 and test_index >= len(l) -1): #either they meet along the way or one has finished
+                    if l.index(test_point) == test_index or (l.index(test_point) == len(l) - 1 and test_index >= len(l) -1) or (test_index < len(l)-1  and test_point == l[test_index -1] and self.pathPos.getValue()[test_index -1] == l[test_index]): #either they meet along the way or one has finished
                         #continue
                         new_act = self.collision_avoid(test_index ) #get the new action that you are going to do instead
 
