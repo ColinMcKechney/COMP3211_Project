@@ -22,7 +22,6 @@ class MyAgent(BaseAgent):
     def __init__(self, name, env):
         super().__init__(name, env)
         self.firstIter = True
-        self.bestPath = []
         self.locations = {}
         self.initials = {}
         self.paths = {}
@@ -220,7 +219,16 @@ class MyAgent(BaseAgent):
                         
 
 
-            next_move = self.bestPath.pop(0)
+            for name in self.paths.keys():
+                if len(self.paths[name]) > 0:
+                    if name == self.name:
+                        next_move = self.paths[name].pop(0)
+                    else:
+                        self.paths[name].pop(0)
+
+            
+
+            #next_move = self.bestPath.pop(0)
             
         return next_move
 
