@@ -25,6 +25,7 @@ class MyAgent(BaseAgent):
         self.bestPath = []
         self.locations = {}
         self.initials = {}
+        self.paths = {}
         self.pathPos = []
     
     #Give the available actions but only regarded to the map not players
@@ -107,7 +108,6 @@ class MyAgent(BaseAgent):
             
             mapName = self.env.env_name.capitalize()
             mapName = 'ShortestPath'+ mapName + '.db'
-            self.initPos = Point(game_state[self.name][0],game_state[self.name][1])
             
             sqlite3.register_converter("Point", convert_point)
             sqlite3.register_converter("ListPaths", convert_ListPath)
@@ -116,29 +116,28 @@ class MyAgent(BaseAgent):
             
             con = sqlite3.connect(mapName,detect_types=sqlite3.PARSE_DECLTYPES)
             cur = con.cursor()
-            cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(self.name,self.initPos))
-            
-            cur.fetchone
-            pathPos = cur.fetchone()[0]
             
             for name in game_state.keys():
                 self.initials[name] = Point(game_state[name][0], game_state[name][1])
                 cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,Point(game_state[name][0], game_state[name][1])))
                 cur.fetchone
-                self.locations[name] = cur.fetchone()[0].getValue()
+                self.locations[name] = cur.fetchone()[0]
 
+                if(self.locations[name] != None):
+                    self.paths[name] = self.convertPathPosToActions(self.locations[name].getValue(), name)
+                else:
+                    self.paths = list()
 
+                
+
+                if name == self.name:
+                    self.initPos = self.initials[name]
+                    self.bestPath = self.paths[name]
+
+            self.firstIter = False
 
             cur.close()
-            con.close()
-
-            self.pathPos = pathPos
-                       
-            if(pathPos != None):
-                self.bestPath = self.convertPathPosToActions(pathPos.getValue(), self.name)
-            else:
-                self.bestPath = list()
-            self.firstIter = False
+            con.close()         
 
         #if len(self.bestPath) <= 1 :
             #self.firstIter = True
@@ -168,7 +167,7 @@ class MyAgent(BaseAgent):
         next_move = 'nil'
         if len(self.bestPath) != 0:
 
-            for key, l in self.locations.items(): #loop through the other agents 
+            '''for key, l in self.locations.items(): #loop through the other agents 
                 test_point = self.pathPos.getValue()[-1 * len(self.bestPath)] #this is the point we're working with at the moment, the next spot the agent is going to go
                 if test_point in l:  #if it's in the path of the other 
                     
@@ -215,7 +214,7 @@ class MyAgent(BaseAgent):
                         else:
                             self.bestPath = list()
                         
-                        #potential broadcast point for database
+                        #potential broadcast point for database'''
 
 
                         
