@@ -128,10 +128,11 @@ class MyAgent(BaseAgent):
                 else:
                     self.paths = list()
 
+                print(name, self.locations[name].getValue())
+
                 
 
-                if name == self.name:
-                    self.initPos = self.initials[name]
+
 
             self.firstIter = False
 
@@ -155,12 +156,11 @@ class MyAgent(BaseAgent):
                 for key, l in other_loc: #loop through the other agents 
                     test_point = self.locations[name].getValue()[-1 * len(self.paths[name])] #this is the point we're working with at the moment, the next spot the agent is going to go
                     if test_point in l.getValue():  #if it's in the path of the other 
+                        test_index = len(self.locations[name].getValue()) - len(self.paths[name]) #index of point
                         
-                        test_index = self.locations[name].getValue().index(test_point) #index of point
                         if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1]  and self.locations[name].getValue()[test_index -1]  == l.getValue()[test_index]): #either they meet along the way or one has finished
                             
                             new_act = self.collision_avoid(test_index, name) #get the new action that you are going to do instead
-                            
                             
 
                             #grabbing new path from new position
@@ -202,7 +202,7 @@ class MyAgent(BaseAgent):
                                 self.paths[name] = self.convertPathPosToActions(pathPos.getValue(), name)
                             else:
                                 self.paths[name] = list()
-                            
+                            print(name, self.locations[name].getValue())
                             #potential broadcast point for database'''
 
 
