@@ -103,7 +103,9 @@ class MyAgent(BaseAgent):
     def get_action(self,game_state):
         
         if self.firstIter:
-            
+            self.locations = {}
+            self.initials = {}
+            self.paths = {}
             mapName = self.env.env_name.capitalize()
             mapName = 'ShortestPath'+ mapName + '.db'
             
@@ -134,10 +136,16 @@ class MyAgent(BaseAgent):
             self.firstIter = False
 
             cur.close()
-            con.close()         
-
-        #if len(self.bestPath) <= 1 :
-            #self.firstIter = True
+            con.close()
+    
+        
+        count = 0
+        for item in self.paths.values():
+            if len(item) < 1:
+                count += 1
+        
+        if count == 3:
+            self.firstIter = True
         
         next_move = 'nil'
         for name in self.locations.keys():
@@ -149,20 +157,20 @@ class MyAgent(BaseAgent):
                     if test_point in l.getValue():  #if it's in the path of the other 
                         
                         test_index = self.locations[name].getValue().index(test_point) #index of point
-                        if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1] and self.locations[name].getValue()[test_index -1] == l.getValue()[test_index]): #either they meet along the way or one has finished
+                        if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1]  and self.locations[name].getValue()[test_index -1]  == l.getValue()[test_index]): #either they meet along the way or one has finished
                             
                             new_act = self.collision_avoid(test_index, name) #get the new action that you are going to do instead
+                            
                             
 
                             #grabbing new path from new position
                             mapName = self.env.env_name.capitalize()
                             mapName = 'ShortestPath'+ mapName + '.db'
-                            old_init = self.locations[name].getValue()[-1 * len(self.paths[name]) -1 ]
+                            old_init = self.locations[name].getValue()[-1 * len(self.paths[name]) -1 ] if len(self.paths[name]) + 1 <= len(self.locations[name].getValue()) else self.initials[name].getValue()
 
                             self.initials[name] = Point(new_act[0],new_act[1])
                             if name ==self.name:
                                 self.initPos = Point(new_act[0],new_act[1])
-                            
                             
                             sqlite3.register_converter("Point", convert_point)
                             sqlite3.register_converter("ListPaths", convert_ListPath)
@@ -183,7 +191,7 @@ class MyAgent(BaseAgent):
 
                             for val in pathPos.getValue():
                                 tmp.append(val)
-
+                            
                             self.locations[name] = ListPaths(tmp)
                             pathPos.getValue().insert(0,self.initials[name].getValue())
                             if name == self.name:
@@ -195,7 +203,7 @@ class MyAgent(BaseAgent):
                             else:
                                 self.paths[name] = list()
                             
-                            #potential broadcast point for database
+                            #potential broadcast point for database'''
 
 
                         
@@ -216,26 +224,46 @@ class MyAgent(BaseAgent):
 
     def collision_avoid(self,k,name):
         #collision avoidance alg
-        game_state = {name: self.locations[name].getValue()[k-1]} #create a game state
-        other_loc = list(self.locations.items())
-        other_loc.remove((name, self.locations[name]))
-        for key, item in other_loc:
-            if k-1 > len(item.getValue()):
-                game_state[key] = item.getValue()[-1]
-            else:
-                game_state[key] = item.getValue()[k-1]
-        actions = self.get_avai_actions(game_state, name)
-        
-        actions.remove(self.paths[name][0]) #remove the action causing the conflict
-        actions.remove('nil') #can't do nothing to avoid deadlock
-        
-        #find the option that keeps the distance the best 
-        min_euclid = 999999
-        min_act = self.locations[name].getValue()[k-1]
-        for action in actions:
-            tmp = move(game_state[name],action)
-            tmp_dist = euclideanDist(tmp,self.env.get_goals()[name])
-            if tmp_dist < min_euclid:
-                min_euclid = tmp_dist
-                min_act = tmp
-        return min_act
+        if k > 0:
+            game_state = {name: self.locations[name].getValue()[k-1]} #create a game state
+            other_loc = list(self.locations.items())
+            other_loc.remove((name, self.locations[name]))
+            for key, item in other_loc:
+                if k-1 > len(item.getValue()) - 1 :
+                    game_state[key] = item.getValue()[-1]
+                else:
+                    game_state[key] = item.getValue()[k-1]
+            actions = self.get_avai_actions(game_state, name)
+            actions.remove(self.paths[name][0]) #remove the action causing the conflict
+            actions.remove('nil') #can't do nothing to avoid deadlock
+            
+            #find the option that keeps the distance the best 
+            min_euclid = 999999
+            min_act = self.locations[name].getValue()[k-1]
+            for action in actions:
+                tmp = move(game_state[name],action)
+                tmp_dist = euclideanDist(tmp,self.env.get_goals()[name])
+                if tmp_dist < min_euclid:
+                    min_euclid = tmp_dist
+                    min_act = tmp
+            return min_act
+        else:
+            game_state = {name: self.initials[name].getValue()} #create a game state
+            other_loc = list(self.locations.items())
+            other_loc.remove((name, self.locations[name]))
+            for key, item in other_loc:
+                game_state[key] = self.initials[key].getValue()
+            actions = self.get_avai_actions(game_state, name)
+            actions.remove(self.paths[name][0]) #remove the action causing the conflict
+            actions.remove('nil') #can't do nothing to avoid deadlock
+            
+            #find the option that keeps the distance the best 
+            min_euclid = 999999
+            min_act = self.initials[name].getValue()
+            for action in actions:
+                tmp = move(game_state[name],action)
+                tmp_dist = euclideanDist(tmp,self.env.get_goals()[name])
+                if tmp_dist < min_euclid:
+                    min_euclid = tmp_dist
+                    min_act = tmp
+            return min_act
