@@ -24,7 +24,7 @@ class MyAgent(BaseAgent):
         self.firstIter = True
         self.bestPath = []
         self.locations = {}
-        self.other_initials = {}
+        self.initials = {}
         self.pathPos = []
     
     #Give the available actions but only regarded to the map not players
@@ -91,8 +91,8 @@ class MyAgent(BaseAgent):
             closedList.append(newPos)
         
     
-    def convertPathPosToActions(self,pathPos):
-        currentPos = self.initPos.getValue()
+    def convertPathPosToActions(self,pathPos, name):
+        currentPos = self.initials[name].getValue()        
         actions = []
         for pos in pathPos:
             action = list(action_dict.keys())[list(action_dict.values()).index(list(np.subtract(pos,currentPos)))]
@@ -122,21 +122,20 @@ class MyAgent(BaseAgent):
             pathPos = cur.fetchone()[0]
             
             for name in game_state.keys():
-                if name == self.name:
-                    continue
-                self.other_initials[name] = game_state[name]
+                self.initials[name] = Point(game_state[name][0], game_state[name][1])
                 cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,Point(game_state[name][0], game_state[name][1])))
                 cur.fetchone
                 self.locations[name] = cur.fetchone()[0].getValue()
+
 
 
             cur.close()
             con.close()
 
             self.pathPos = pathPos
-            
+                       
             if(pathPos != None):
-                self.bestPath = self.convertPathPosToActions(pathPos.getValue())
+                self.bestPath = self.convertPathPosToActions(pathPos.getValue(), self.name)
             else:
                 self.bestPath = list()
             self.firstIter = False
@@ -217,26 +216,8 @@ class MyAgent(BaseAgent):
                             self.bestPath = list()
                         
                         #potential broadcast point for database
-                        '''updated_name = 'update_' + self.name
-                        print('before')
-                            #cur.execute("INSERT INTO paths (agent, position, path) VALUES((?), (?), (?))",(updated_name,self.initPos,self.pathPos))
-                        cur.execute("SELECT * FROM paths WHERE agent = (?)",(updated_name))
-                        print(cur.fetchall())
-                        print('here')
-
-                        #cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(updated_name,self.initPos))
-                        
-                        cur.fetchone
-                        pathPos = cur.fetchone()[0]
-                        print(pathPos)
-                        print(self.pathPos)
-
-                        cur.close()
-                        con.close()'''
 
 
-                        
-                        '''TODO: create a new entry in the database to broadcast changes'''
                         
 
 
