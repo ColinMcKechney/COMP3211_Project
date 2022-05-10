@@ -140,70 +140,73 @@ class MyAgent(BaseAgent):
             #self.firstIter = True
         
         next_move = 'nil'
-        if len(self.paths[self.name]) != 0:
-            other_loc = list(self.locations.items())
-            other_loc.remove((self.name, self.locations[self.name]))
-            for key, l in other_loc: #loop through the other agents 
-                test_point = self.locations[self.name].getValue()[-1 * len(self.paths[self.name])] #this is the point we're working with at the moment, the next spot the agent is going to go
-                if test_point in l.getValue():  #if it's in the path of the other 
-                    
-                    test_index = self.locations[self.name].getValue().index(test_point) #index of point
-                    if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1] and self.locations[self.name].getValue()[test_index -1] == l.getValue()[test_index]): #either they meet along the way or one has finished
+        for name in self.locations.keys():
+            if len(self.paths[name]) != 0:
+                other_loc = list(self.locations.items())
+                other_loc.remove((name, self.locations[name]))
+                for key, l in other_loc: #loop through the other agents 
+                    test_point = self.locations[name].getValue()[-1 * len(self.paths[name])] #this is the point we're working with at the moment, the next spot the agent is going to go
+                    if test_point in l.getValue():  #if it's in the path of the other 
                         
-                        new_act = self.collision_avoid(test_index, self.name) #get the new action that you are going to do instead
+                        test_index = self.locations[name].getValue().index(test_point) #index of point
+                        if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1] and self.locations[name].getValue()[test_index -1] == l.getValue()[test_index]): #either they meet along the way or one has finished
+                            
+                            new_act = self.collision_avoid(test_index, name) #get the new action that you are going to do instead
+                            
+
+                            #grabbing new path from new position
+                            mapName = self.env.env_name.capitalize()
+                            mapName = 'ShortestPath'+ mapName + '.db'
+                            old_init = self.locations[name].getValue()[-1 * len(self.paths[name]) -1 ]
+
+                            self.initials[name] = Point(new_act[0],new_act[1])
+                            if name ==self.name:
+                                self.initPos = Point(new_act[0],new_act[1])
+                            
+                            
+                            sqlite3.register_converter("Point", convert_point)
+                            sqlite3.register_converter("ListPaths", convert_ListPath)
+                            sqlite3.register_adapter(Point, adapt_point)
+                            sqlite3.register_adapter(ListPaths,adapt_Listpath)
+                            
+                            con = sqlite3.connect(mapName,detect_types=sqlite3.PARSE_DECLTYPES)
+                            cur = con.cursor()
+                            cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,self.initials[name]))
+                            
+                            cur.fetchone
+                            pathPos = cur.fetchone()[0]
+
+                            
+                            #add back in the old values that you've already traveled, keeps indexes in line
+                            tmp = [self.locations[name].getValue()[i] for i in range(test_index)]
+                            tmp.append(self.initials[name].getValue())
+
+                            for val in pathPos.getValue():
+                                tmp.append(val)
+
+                            self.locations[name] = ListPaths(tmp)
+                            pathPos.getValue().insert(0,self.initials[name].getValue())
+                            if name == self.name:
+                                self.initPos = Point(old_init[0], old_init[1]) #reset initPoint to keep path to actions working 
+                            self.initials[name] = Point(old_init[0], old_init[1])
+                            
+                            if(pathPos != None):
+                                self.paths[name] = self.convertPathPosToActions(pathPos.getValue(), name)
+                            else:
+                                self.paths[name] = list()
+                            
+                            #potential broadcast point for database
+
+
                         
 
-                        #grabbing new path from new position
-                        mapName = self.env.env_name.capitalize()
-                        mapName = 'ShortestPath'+ mapName + '.db'
-                        old_init = self.locations[self.name].getValue()[-1 * len(self.paths[self.name]) -1 ]
 
-                        self.initials[self.name] = Point(new_act[0],new_act[1])
-                        self.initPos = Point(new_act[0],new_act[1])
-                        
-                        
-                        sqlite3.register_converter("Point", convert_point)
-                        sqlite3.register_converter("ListPaths", convert_ListPath)
-                        sqlite3.register_adapter(Point, adapt_point)
-                        sqlite3.register_adapter(ListPaths,adapt_Listpath)
-                        
-                        con = sqlite3.connect(mapName,detect_types=sqlite3.PARSE_DECLTYPES)
-                        cur = con.cursor()
-                        cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(self.name,self.initials[self.name]))
-                        
-                        cur.fetchone
-                        pathPos = cur.fetchone()[0]
-
-                        
-                        #add back in the old values that you've already traveled, keeps indexes in line
-                        tmp = [self.locations[self.name].getValue()[i] for i in range(test_index)]
-                        tmp.append(self.initials[self.name].getValue())
-
-                        for val in pathPos.getValue():
-                            tmp.append(val)
-
-                        self.locations[self.name] = ListPaths(tmp)
-                        pathPos.getValue().insert(0,self.initials[self.name].getValue())
-                        self.initPos = Point(old_init[0], old_init[1]) #reset initPoint to keep path to actions working 
-                        self.initials[self.name] = Point(old_init[0], old_init[1])
-                        
-                        if(pathPos != None):
-                            self.paths[self.name] = self.convertPathPosToActions(pathPos.getValue(), self.name)
-                        else:
-                            self.paths[self.name] = list()
-                        
-                        #potential broadcast point for database'''
-
-
-                        
-
-
-            for name in self.paths.keys():
-                if len(self.paths[name]) > 0:
-                    if name == self.name:
-                        next_move = self.paths[name].pop(0)
-                    else:
-                        self.paths[name].pop(0)
+        for name in self.paths.keys():
+            if len(self.paths[name]) > 0:
+                if name == self.name:
+                    next_move = self.paths[name].pop(0)
+                else:
+                    self.paths[name].pop(0)
 
             
 
