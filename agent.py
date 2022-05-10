@@ -101,6 +101,10 @@ class MyAgent(BaseAgent):
 
     @set_timeout(TIMEOUT,after_timeout)
     def get_action(self,game_state):
+        if not self.firstIter:
+            for name in self.locations.keys():
+                if self.locations[name] and self.locations[name].getValue()[len(self.locations[name].getValue()) - len(self.paths[name]) - 1] != list(game_state[name]):
+                    self.firstIter = True
         
         if self.firstIter:
             self.locations = {}
@@ -118,6 +122,7 @@ class MyAgent(BaseAgent):
             cur = con.cursor()
             
             for name in game_state.keys():
+                
                 self.initials[name] = Point(game_state[name][0], game_state[name][1])
                 cur.execute("SELECT path FROM paths WHERE agent = (?) and position = (?)",(name,Point(game_state[name][0], game_state[name][1])))
                 cur.fetchone
@@ -126,9 +131,10 @@ class MyAgent(BaseAgent):
                 if(self.locations[name] != None):
                     self.paths[name] = self.convertPathPosToActions(self.locations[name].getValue(), name)
                 else:
-                    self.paths = list()
+                    self.paths[name] = list()
+                
 
-                print(name, self.locations[name].getValue())
+                
 
                 
 
@@ -147,6 +153,7 @@ class MyAgent(BaseAgent):
         
         if count == 3:
             self.firstIter = True
+
         
         next_move = 'nil'
         for name in self.locations.keys():
@@ -155,7 +162,7 @@ class MyAgent(BaseAgent):
                 other_loc.remove((name, self.locations[name]))
                 for key, l in other_loc: #loop through the other agents 
                     test_point = self.locations[name].getValue()[-1 * len(self.paths[name])] #this is the point we're working with at the moment, the next spot the agent is going to go
-                    if test_point in l.getValue():  #if it's in the path of the other 
+                    if l and test_point in l.getValue():  #if it's in the path of the other 
                         test_index = len(self.locations[name].getValue()) - len(self.paths[name]) #index of point
                         
                         if l.getValue().index(test_point) == test_index or (l.getValue().index(test_point) == len(l.getValue()) - 1 and test_index >= len(l.getValue()) -1) or (test_index < len(l.getValue())-1  and test_point == l.getValue()[test_index -1]  and self.locations[name].getValue()[test_index -1]  == l.getValue()[test_index]): #either they meet along the way or one has finished
@@ -202,7 +209,6 @@ class MyAgent(BaseAgent):
                                 self.paths[name] = self.convertPathPosToActions(pathPos.getValue(), name)
                             else:
                                 self.paths[name] = list()
-                            print(name, self.locations[name].getValue())
                             #potential broadcast point for database'''
 
 
