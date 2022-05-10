@@ -37,12 +37,12 @@ class MyAgent(BaseAgent):
                     avai_actions.append(action)
         return avai_actions
     
-    def get_avai_actions(self, game_state):
+    def get_avai_actions(self, game_state, agent):
         avai_actions = []
         for action in action_dict:
             fake_action_profile = dict()
             for name in game_state:
-                if name == self.name:
+                if name == agent:
                     fake_action_profile[name] = action
                 else:
                     fake_action_profile[name] = 'nil'
@@ -253,7 +253,7 @@ class MyAgent(BaseAgent):
                 game_state[key] = item[-1]
             else:
                 game_state[key] = item[k-1]
-        actions = self.get_avai_actions(game_state)
+        actions = self.get_avai_actions(game_state, self.name)
         
         actions.remove(self.bestPath[0]) #remove the action causing the conflict
         actions.remove('nil') #can't do nothing to avoid deadlock
